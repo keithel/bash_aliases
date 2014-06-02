@@ -1,0 +1,100 @@
+# Bash functions for accessing and manipulating Mosaic Metadata databases
+# Source this from your .bashrc
+
+function fetchmetadatadb()
+{
+    #set -x
+    metadatadb "fetch" $@
+    #set +x
+}
+
+function rmmetadatadb()
+{
+    #set -x
+    metadatadb "delete" $@
+    #set +x
+}
+
+function metadatadb()
+{
+    #set -x
+    local mode
+    if [[ -n "$1" && ("$1" == "fetch" || "$1" == "delete") ]]; then
+        mode=$1;
+        shift;
+    fi
+
+    function usage
+    {
+        local m=$1
+        echo "Usage: " >&2
+        if [ $m == "fetch" ]; then
+            echo "   ${FUNCNAME[1]} <metadata@database.name> [output dir]" >&2;
+        else
+            echo "   ${FUNCNAME[1]} <metadata@database.name>" >&2;
+        fi
+    }
+
+    if [ $# -lt 1 ]; then
+        echo "Specify valid metadata database name to $mode" >&2
+        usage $mode 
+        return 1
+    fi
+    if [ $# -gt 2 ]; then
+        echo "Too many arguments." >&2
+        usage $mode 
+        return 1
+    fi
+
+    local db=$1
+    local dest=.
+    if [ "$mode" == "fetch" -a $# -eq 2 ]; then
+        if [ ! -d $2 ]; then
+            echo "output directory doesn't exist" >&2
+            usage $mode 
+            return 1
+        fi
+        dest=$2
+    fi
+
+    # No longer need to calculate path
+    local dbPath=$(md5 -s $db | sed -e 's/^.*("\(.*\)") = \(..\)\(..\).*$/\/var\/mosaic\/\2\/\3\/\1/')
+    local mosaicDriveHeader="MosaicAuth-5fac4ec7cb9213033de45c34f748ee3a29: x"
+
+    if [ "$mode" == "fetch" ]; then
+        echo -n "Fetching $(dirname $dbPath)/" >&2
+        echo $(basename $dbPath)
+        #curl -u ${db}:onemorething -o $dest/$db https://metadata.mosaicarchive.com/${db}/DatabaseCopy
+        curl -H "$mosaicDriveHeader" -o $dest/$db https://metadata.mosaicarchive.com/${db}/DatabaseCopy
+        #scp metadata:$dbPath $dest
+    elif [ "$mode" == "delete" ]; then
+        echo -n "Deleting $(dirname $dbPath)/" >&2
+        echo $(basename $dbPath)
+        curl -u ${db}:onemorething https://metadata.mosaicarchive.com/${db}/delete
+        curl -H "$mosaicDriveHeader" https://metadata.mosaicarchive.com/${db}/delete
+        #ssh metadata rm $dbPath
+    else
+        #echo $dbPath
+        driveDbExists=$(curl -s -o /dev/null -w "%{http_code}" -H "$mosaicDriveHeader" https://metadata.mosaicarchive.com/${db}/exists)
+        oldDbExists=$(curl -s -o /dev/null -w "%{http_code}" -u ${db}:onemorething https://metadata.mosaicarchive.com/${db}/exists)
+        #curl -v -u ${db}:onemorething https://metadata.mosaicarchive.com/${db}/exists
+
+        if [ "$driveDbExists" == "200" ]; then
+            echo "MosaicDrive DB: PRESENT"
+        elif [ "$driveDbExists" != "404" ]; then
+            echo "Mosaic 2.0  DB: REQUEST ERROR!"
+        else
+            echo "MosaicDrive DB: absent"
+        fi
+
+        if [ "$oldDbExists" == "200" ]; then
+            echo "Mosaic 2.0  DB: PRESENT"
+        elif [ "$oldDbExists" != "404" ]; then
+            echo "Mosaic 2.0  DB: REQUEST ERROR!"
+        else
+            echo "Mosaic 2.0  DB: absent"
+        fi
+    fi
+    #set +x
+}
+
