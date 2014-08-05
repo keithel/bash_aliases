@@ -1,0 +1,2 @@
+command alias foo continue
+command process handle SIGPIPE -n true -p true -s false

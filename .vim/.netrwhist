@@ -1,0 +1,9 @@
+let g:netrw_dirhistmax  =10
+let g:netrw_dirhist_cnt =7
+let g:netrw_dirhist_1='/Users/joven/Coding/mosaic/lr/target'
+let g:netrw_dirhist_2='/Users/kkyzivat/builds/playground/ToDoListParent/ToDoList/ToDoList.xcodeproj'
+let g:netrw_dirhist_3='/Users/kkyzivat/builds/mosaic-work/Mosaic/testSnapshot/core'
+let g:netrw_dirhist_4='/Users/kkyzivat/builds/playground/google_drive_research'
+let g:netrw_dirhist_5='/Users/kkyzivat/Documents/Lightroom SDK 5.0/Sample Plugins/flickr.lrdevplugin'
+let g:netrw_dirhist_6='/Users/kkyzivat/.bash_aliases.d'
+let g:netrw_dirhist_7='/tmp'

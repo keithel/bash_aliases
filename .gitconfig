@@ -1,0 +1,39 @@
+[color]
+    ui = true
+[user]
+	name = Keith Kyzivat
+	email = kkyzivat@mosaicarchive.com
+[core]
+	excludesfile = /Users/kkyzivat/.gitignore_global
+[push]
+	default = simple
+
+[difftool "sourcetree"]
+	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+	path = 
+[mergetool "sourcetree"]
+	cmd = /Applications/SourceTree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+	trustExitCode = true
+
+[merge]
+    tool = p4merge
+    keepBackup = false
+[mergetool "p4merge"]
+    cmd = p4merge "$BASE" "$LOCAL" "$REMOTE" "$MERGED"
+    keepTemporaries = false
+    trustExitCode = false
+    keepBackup = false
+
+[alias]
+co = checkout
+ci = commit
+rb = rebase
+lol = log --graph --decorate --pretty=oneline --abbrev-commit
+lola = log --graph --decorate --pretty=oneline --abbrev-commit --all
+rpull = !git pull --rebase
+branch-point = !sh -c 'merge=$(git rev-list --min-parents=2 --grep="Merge.*$1" --all | tail -1) && git merge-base $merge^1 $merge^2' 
+
+oldcleanmosaic = !git clean -xd -e ".classpath" -e ".project"
+cleanmosaic = "!f() { if [ ! -z "$GIT_PREFIX" ]; then cd $GIT_PREFIX; fi; x=$(git clean -xd -e '.classpath' -e '.project' -e '.settings' -e '*.xcuserdatad' -e 'xcuserdata' -n $1); if [[ -z "$x" || `echo \"$x\" | wc -l` -lt 1 ]] ; then echo 'Nothing to clean' && exit ; fi ; read -p \"$x\n\nOk to clean (yes/NO)? \" -e xyzzy && if [[ $xyzzy =~ [yY][eE][sS] ]] ; then  git clean -xd -e '.classpath' -e '.project' -e '.settings' -e '*.xcuserdatad' -e 'xcuserdata' -f $1; fi; }; f"
+[rerere]
+	enabled = true
