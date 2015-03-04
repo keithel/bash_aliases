@@ -48,6 +48,14 @@ function metadatadb()
 
     local db=$1
     local dest=.
+
+    # Check if there's an @ sign in the email.
+    # If @ is not present, append gmail.com.
+    if [[ ! "$db" =~ "@" ]]; then
+        echo "DB doesn't have an @"
+        db="${db}@gmail.com"
+    fi
+
     if [ "$mode" == "fetch" -a $# -eq 2 ]; then
         if [ ! -d $2 ]; then
             echo "output directory doesn't exist" >&2
