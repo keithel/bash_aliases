@@ -1,0 +1,9 @@
+function middle()
+{
+    startidx=$1
+    len=$2
+    endidx=$(($startidx+$len))
+    filename=$3
+
+    awk "FNR>=${startidx} && FNR<=${endidx} { print NR\" \"\$0 }; FNR>${endidx} { print \"END HERE\"; exit }" $filename
+}
