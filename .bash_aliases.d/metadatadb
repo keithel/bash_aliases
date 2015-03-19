@@ -18,6 +18,8 @@ function rmmetadatadb()
 function metadatadb()
 {
     #set -x
+    METADATA_URL="https://metadata.mosaicarchive.com"
+
     local mode
     if [[ -n "$1" && ("$1" == "fetch" || "$1" == "delete") ]]; then
         mode=$1;
@@ -29,11 +31,17 @@ function metadatadb()
         local m=$1
         echo "Usage: " >&2
         if [ $m == "fetch" ]; then
-            echo "   ${FUNCNAME[1]} <metadata@database.name> [output dir]" >&2;
+            echo "   ${FUNCNAME[1]} [dev] <metadata@database.name> [output dir]" >&2;
         else
-            echo "   ${FUNCNAME[1]} <metadata@database.name>" >&2;
+            echo "   ${FUNCNAME[1]} [dev] <metadata@database.name>" >&2;
         fi
     }
+
+    if [ $# -ge 1 -a "$1" == "dev" ]; then
+        METADATA_URL="https://dev_metadata.mosaicarchive.com"
+        shift
+        echo "Development mode - operating on server $METADATA_URL"
+    fi
 
     if [ $# -lt 1 ]; then
         echo "Specify valid metadata database name to $mode" >&2
@@ -66,41 +74,55 @@ function metadatadb()
     fi
 
     # No longer need to calculate path
-    local dbPath=$(md5 -s $db | sed -e 's/^.*("\(.*\)") = \(..\)\(..\).*$/\/var\/mosaic\/\2\/\3\/\1/')
+    dbPath=$(md5 -s ${db}-p | sed -e 's/^.*("\(.*\)") = \(..\)\(..\).*$/\/var\/mosaic\/\2\/\3\/\1/')
+    dbPathMosaic=$(md5 -s ${db}-g | sed -e 's/^.*("\(.*\)") = \(..\)\(..\).*$/\/var\/mosaic\/\2\/\3\/\1/')
+    dbPathOld=$(md5 -s ${db} | sed -e 's/^.*("\(.*\)") = \(..\)\(..\).*$/\/var\/mosaic\/\2\/\3\/\1/')
     local mosaicDriveHeader="MosaicAuth-5fac4ec7cb9213033de45c34f748ee3a29: x"
+    local photoviaHeader="MosaicAuth-5fac4ec7cb9213033de45c34f748ee3a29: photovia"
 
     if [ "$mode" == "fetch" ]; then
         echo -n "Fetching $(dirname $dbPath)/" >&2
         echo $(basename $dbPath)
-        #curl -u ${db}:onemorething -o $dest/$db https://metadata.mosaicarchive.com/${db}/DatabaseCopy
-        curl -H "$mosaicDriveHeader" -o $dest/$db https://metadata.mosaicarchive.com/${db}/DatabaseCopy
+        #curl -u ${db}:onemorething -o $dest/$db ${METADATA_URL}/${db}/DatabaseCopy
+        #curl -H "$mosaicDriveHeader" -o $dest/${db}-g ${METADATA_URL}/${db}/DatabaseCopy
+        curl -H "$photoviaHeader" -o $dest/${db}-p ${METADATA_URL}/${db}/DatabaseCopy
         #scp metadata:$dbPath $dest
     elif [ "$mode" == "delete" ]; then
         echo -n "Deleting $(dirname $dbPath)/" >&2
         echo $(basename $dbPath)
-        curl -u ${db}:onemorething https://metadata.mosaicarchive.com/${db}/delete
-        curl -H "$mosaicDriveHeader" https://metadata.mosaicarchive.com/${db}/delete
+        #curl -u ${db}:onemorething ${METADATA_URL}/${db}/delete
+        #curl -H "$mosaicDriveHeader" ${METADATA_URL}/${db}/delete
+        curl -H "$photoviaHeader" ${METADATA_URL}/${db}/delete
         #ssh metadata rm $dbPath
     else
         #echo $dbPath
-        driveDbExists=$(curl -s -o /dev/null -w "%{http_code}" -H "$mosaicDriveHeader" https://metadata.mosaicarchive.com/${db}/exists)
-        oldDbExists=$(curl -s -o /dev/null -w "%{http_code}" -u ${db}:onemorething https://metadata.mosaicarchive.com/${db}/exists)
-        #curl -v -u ${db}:onemorething https://metadata.mosaicarchive.com/${db}/exists
+        photoviaDbExists=$(curl -s -o /dev/null -w "%{http_code}" -H "$photoviaHeader" ${METADATA_URL}/${db}/exists)
+        driveDbExists=$(curl -s -o /dev/null -w "%{http_code}" -H "$mosaicDriveHeader" ${METADATA_URL}/${db}/exists)
+        oldDbExists=$(curl -s -o /dev/null -w "%{http_code}" -u ${db}:onemorething ${METADATA_URL}/${db}/exists)
+        #curl -v -u ${db}:onemorething ${METADATA_URL}/${db}/exists
+
+        if [ "$photoviaDbExists" == "200" ]; then
+            echo "Photovia DB: PRESENT: ${dbPath}"
+        elif [ "$photoviaDbExists" != "404" ]; then
+            echo "Photovia DB: REQUEST ERROR!"
+        else
+            echo "Photovia DB: absent"
+        fi
 
         if [ "$driveDbExists" == "200" ]; then
-            echo "MosaicDrive DB: PRESENT"
+            echo "MosaicDrive DB: PRESENT: ${dbPathMosaic}"
         elif [ "$driveDbExists" != "404" ]; then
-            echo "Mosaic 2.0  DB: REQUEST ERROR!"
+            echo "MosaicDrive DB: REQUEST ERROR!"
         else
             echo "MosaicDrive DB: absent"
         fi
 
         if [ "$oldDbExists" == "200" ]; then
-            echo "Mosaic 2.0  DB: PRESENT"
+            echo "Mosaic 2.0 DB: PRESENT: ${dbPathOld}"
         elif [ "$oldDbExists" != "404" ]; then
-            echo "Mosaic 2.0  DB: REQUEST ERROR!"
+            echo "Mosaic 2.0 DB: REQUEST ERROR!"
         else
-            echo "Mosaic 2.0  DB: absent"
+            echo "Mosaic 2.0 DB: absent"
         fi
     fi
     #set +x
