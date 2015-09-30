@@ -30,7 +30,7 @@ function metadatadb()
     {
         local m=$1
         echo "Usage: " >&2
-        if [ $m == "fetch" ]; then
+        if [[ -n "$1" && $m == "fetch" ]]; then
             echo "   ${FUNCNAME[1]} [dev] <metadata@database.name> [output dir]" >&2;
         else
             echo "   ${FUNCNAME[1]} [dev] <metadata@database.name>" >&2;
@@ -44,7 +44,11 @@ function metadatadb()
     fi
 
     if [ $# -lt 1 ]; then
-        echo "Specify valid metadata database name to $mode" >&2
+        if [[ -z $mode ]]; then
+            echo "Specify valid metadata database name to check" >&2
+        else
+            echo "Specify valid metadata database name to $mode" >&2
+        fi
         usage $mode 
         return 1
     fi
